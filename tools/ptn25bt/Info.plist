@@ -4,7 +4,7 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>dev.codex.brother-label-bt.ptn25bt</string>
+  <string>dev.codex.ble-label-printers.ptn25bt</string>
   <key>CFBundleExecutable</key>
   <string>ptn25bt</string>
   <key>CFBundleName</key>
@@ -21,4 +21,3 @@
   <string>Connect to and control a Brother PT-N25BT BLE label printer.</string>
 </dict>
 </plist>
-

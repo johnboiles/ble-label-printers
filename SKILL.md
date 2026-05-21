@@ -1,71 +1,143 @@
 ---
-name: brother-ptn25bt
-description: Control and print to a Brother PT-N25BT Bluetooth Low Energy label printer from macOS, including generating 1bpp Brother raster PRN files, building the CoreBluetooth sender, checking status, and printing labels.
+name: ble-label-printers
+description: Control reverse-engineered Bluetooth LE label printers from macOS, including Brother PT-N25BT and SUPVAN E10 1bpp label generation, preview review, status checks, and printing.
 ---
 
-# Brother PT-N25BT BLE Labels
+# BLE Label Printers
 
-Use this skill when the user wants to print labels, inspect status, or generate artwork for a Brother PT-N25BT label printer from macOS.
+Use this skill when the user wants to print labels, inspect status, generate
+artwork, or continue reverse engineering a supported BLE label printer from
+macOS.
 
-## Workflow
+Supported printers:
+
+- Brother PT-N25BT
+- SUPVAN E10
+
+## Shared Workflow
 
 1. Work from the repository root.
-2. Build the signed CoreBluetooth sender:
+2. Generate a true 1bpp preview and printer job.
+3. Review the preview before printing. Preview images intentionally omit
+   printer-specific trailing padding.
+4. Build the relevant signed CoreBluetooth app bundle.
+5. Print through `open -Wn .build/<App>.app`, not the raw executable, so macOS
+   Bluetooth permissions attach to the signed app.
+6. Read stdout and stderr after every print.
+
+## Brother PT-N25BT
+
+Build:
 
 ```sh
 ./scripts/build-ptn25bt.sh
 ```
 
-3. Generate a 1bpp PRN with `tools/ptn25bt/generate_prn.py`.
-4. Review any `--preview-png` before printing. Preview images intentionally omit printer-specific trailing padding.
-5. Print through the signed app bundle, not the raw executable, so macOS Bluetooth permissions attach to the app:
+Generate a label:
+
+```sh
+python tools/ptn25bt/generate_prn.py work/brother-label.prn \
+  --text "HELLO" \
+  --length-px 320 \
+  --preview-png work/brother-label.png
+```
+
+Print:
 
 ```sh
 open -Wn .build/PTN25BT.app \
-  --stdout work/print.out \
-  --stderr work/print.err \
-  --args --name PT-N25BT --scan-seconds 60 send-file "$PWD/work/label.prn"
+  --stdout work/brother-print.out \
+  --stderr work/brother-print.err \
+  --args --name PT-N25BT --scan-seconds 60 send-file "$PWD/work/brother-label.prn"
 ```
-
-6. Read `work/print.out` and `work/print.err`. Successful BLE transfers ACK with `06f001`.
-
-## Generate Labels
 
 Known-good defaults for 12 mm tape:
 
-```sh
-python tools/ptn25bt/generate_prn.py work/label.prn \
-  --text "HELLO" \
-  --length-px 320 \
-  --preview-png work/label.png
-```
+- Brother feed margin `0`.
+- `13.4 mm` blank trailing raster columns appended at PRN generation time.
+- Successful BLE transfers ACK with `06f001`.
 
-Defaults use Brother feed margin `0` and append `13.4 mm` of blank raster columns at PRN generation time to visually balance the PT-N25BT's mechanical leading blank.
-
-Useful calibration patterns:
+Useful patterns:
 
 ```sh
-python tools/ptn25bt/generate_prn.py work/border.prn --calibration border --length-px 220 --border-px 2 --preview-png work/border.png
-python tools/ptn25bt/generate_prn.py work/margin.prn --calibration margin-test --text "TEST" --length-px 220 --border-px 2 --preview-png work/margin.png
-python tools/ptn25bt/generate_prn.py work/showoff.prn --calibration showoff --length-px 560 --preview-png work/showoff.png
+python tools/ptn25bt/generate_prn.py work/brother-border.prn --calibration border --length-px 220 --border-px 2 --preview-png work/brother-border.png
+python tools/ptn25bt/generate_prn.py work/brother-margin.prn --calibration margin-test --text "TEST" --length-px 220 --border-px 2 --preview-png work/brother-margin.png
+python tools/ptn25bt/generate_prn.py work/brother-showoff.prn --calibration showoff --length-px 560 --preview-png work/brother-showoff.png
 ```
 
-For raw feed/margin testing, set `--trailing-pad-mm 0`. Avoid using Brother `--margin-mm` for visual centering unless deliberately testing feed/cutter behavior.
+For raw feed/margin testing, set `--trailing-pad-mm 0`. Avoid using Brother
+`--margin-mm` for visual centering unless deliberately testing feed/cutter
+behavior.
 
-## Status
+Status:
 
 ```sh
 open -Wn .build/PTN25BT.app \
-  --stdout work/status.out \
-  --stderr work/status.err \
+  --stdout work/brother-status.out \
+  --stderr work/brother-status.err \
   --args --name PT-N25BT --scan-seconds 60 status
 ```
 
-Expected idle 12 mm media status includes model series `0x41`, model `0x30`, errors `0x0000`, and width `12mm`.
+Expected idle 12 mm media status includes model series `0x41`, model `0x30`,
+errors `0x0000`, and width `12mm`.
+
+## SUPVAN E10
+
+Build:
+
+```sh
+./scripts/build-supvan-e10.sh
+```
+
+Generate a label:
+
+```sh
+python tools/supvan-e10/generate_job.py work/e10-label.spv \
+  --text "HELLO" \
+  --length-mm 40 \
+  --preview-png work/e10-label.png
+```
+
+Print:
+
+```sh
+open -Wn .build/SupvanE10.app \
+  --stdout work/e10-print.out \
+  --stderr work/e10-print.err \
+  --args --name T0011 --scan-seconds 25 send-file "$PWD/work/e10-label.spv"
+```
+
+Known-good defaults for 12 mm tape:
+
+- `8 dots/mm`, or `203.2 dpi`.
+- `96` printable/transfer dots vertically.
+- `12` bytes per vertical column.
+- `6.0 mm` blank trailing columns appended at job generation time.
+- Default density/deepness `4`; try `--deepness 5`, `6`, or `7` if output is
+  weak.
+
+Useful pattern:
+
+```sh
+python tools/supvan-e10/generate_job.py work/e10-border.spv --calibration border --length-px 240 --preview-png work/e10-border.png
+```
+
+Status:
+
+```sh
+open -Wn .build/SupvanE10.app \
+  --stdout work/e10-status.out \
+  --stderr work/e10-status.err \
+  --args --name T0011 --scan-seconds 25 status
+```
 
 ## Constraints
 
-- Printer artwork must be 1bpp. Do not trust grayscale previews for layout.
-- Built-in patterns use a 5x7 bitmap font for tiny text.
-- Compression is experimental; default to uncompressed PRN output.
-- If scanning times out, ask the user to wake or power on the printer.
+- Printer artwork must be true 1bpp. Do not print grayscale/antialiased
+  previews without thresholding.
+- Review generated previews for alignment, overlaps, and readability before
+  printing.
+- Keep printer-specific trailing padding out of previews; append it only to the
+  transmitted job stream.
+- Prefer bitmap fonts or carefully thresholded text for tiny labels.
+- If scanning times out, ask the user to wake or power on the target printer.
