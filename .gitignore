@@ -1,5 +1,7 @@
 .build/
 .venv/
+__pycache__/
+*.pyc
 apk/
 tools/jadx/
 vendor/
