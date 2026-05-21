@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brother PT-N25BT"
+  short_description: "Print Brother PT-N25BT labels from macOS"
+  default_prompt: "Use $brother-ptn25bt to generate and print a 1bpp label on my Brother PT-N25BT."

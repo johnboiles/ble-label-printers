@@ -1,0 +1,6 @@
+.build/
+.venv/
+apk/
+tools/jadx/
+vendor/
+work/
