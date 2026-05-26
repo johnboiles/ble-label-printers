@@ -59,6 +59,40 @@ PIXEL_FONT_5X7 = {
     "Z": ["11111", "00001", "00010", "00100", "01000", "10000", "11111"],
 }
 
+Box = tuple[int, int, int, int]
+
+
+def pixel_text_box(
+    xy: tuple[int, int],
+    text: str,
+    scale: int = 1,
+    tracking: int = 1,
+) -> Box:
+    width, height = pixel_text_size(text, scale=scale, tracking=tracking)
+    x, y = xy
+    return (x, y, x + width - 1, y + height - 1)
+
+
+def expand_box(box: Box, padding_px: int) -> Box:
+    x0, y0, x1, y1 = box
+    return (x0 - padding_px, y0 - padding_px, x1 + padding_px, y1 + padding_px)
+
+
+def boxes_overlap(a: Box, b: Box) -> bool:
+    return max(a[0], b[0]) <= min(a[2], b[2]) and max(a[1], b[1]) <= min(a[3], b[3])
+
+
+def assert_boxes_clear(labeled_boxes: list[tuple[str, Box]], padding_px: int = 4) -> None:
+    """Reject layouts where labeled elements collide or crowd each other."""
+    for index, (left_label, left_box) in enumerate(labeled_boxes):
+        padded_left = expand_box(left_box, padding_px)
+        for right_label, right_box in labeled_boxes[index + 1 :]:
+            if boxes_overlap(padded_left, right_box):
+                raise ValueError(
+                    f"layout collision: {left_label} {left_box} is within "
+                    f"{padding_px}px of {right_label} {right_box}"
+                )
+
 
 def packbits_encode(data: bytes) -> bytes:
     out = bytearray()

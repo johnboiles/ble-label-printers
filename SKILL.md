@@ -20,10 +20,27 @@ Supported printers:
 2. Generate a true 1bpp preview and printer job.
 3. Review the preview before printing. Preview images intentionally omit
    printer-specific trailing padding.
-4. Build the relevant signed CoreBluetooth app bundle.
-5. Print through `open -Wn .build/<App>.app`, not the raw executable, so macOS
+4. For custom artwork, inspect a nearest-neighbor 4x preview and reject any
+   glyph/icon contact, clipping, or crowding before printing.
+5. Build the relevant signed CoreBluetooth app bundle.
+6. Print through `open -Wn .build/<App>.app`, not the raw executable, so macOS
    Bluetooth permissions attach to the signed app.
-6. Read stdout and stderr after every print.
+7. Read stdout and stderr after every print.
+
+## Visual QA For Custom Labels
+
+- Treat requested text as primary. Omit decorative icons unless they fit with
+  clear whitespace around the text.
+- Track bounding boxes for all text and decorative elements while generating
+  custom artwork. On PT-N25BT bitmap labels, use
+  `pixel_text_box(...)` and `assert_boxes_clear(...)` from
+  `tools/ptn25bt/generate_prn.py` when placing icons near text.
+- Require at least 4 px of clearance between text and non-text decorations.
+  Use 8-12 px when there is available room, especially on the left/right ends.
+- Never let icons, dividers, waveforms, arrows, bolts, dots, frames, or borders
+  touch or cross a glyph unless the user explicitly asks for that effect.
+- Review the 4x nearest-neighbor preview at original detail. If any element
+  looks like it might collide with text, regenerate a simpler text-first layout.
 
 ## Brother PT-N25BT
 

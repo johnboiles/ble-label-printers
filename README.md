@@ -16,6 +16,23 @@ This is unofficial software. It currently supports:
 - Print through signed CoreBluetooth app bundles so macOS Bluetooth permissions
   attach to stable app identities.
 
+## Visual QA
+
+Before printing custom artwork, inspect a nearest-neighbor enlarged preview and
+reject layouts where icons, dividers, waveforms, arrows, bolts, dots, frames, or
+borders touch or crowd the text. Text should be treated as the primary content;
+decorative elements should be omitted unless they fit with clear whitespace.
+
+For PT-N25BT bitmap labels, `tools/ptn25bt/generate_prn.py` includes helper
+functions for custom scripts:
+
+- `pixel_text_box(...)` computes the exact box for bitmap text.
+- `assert_boxes_clear(...)` rejects layout boxes that collide or get closer
+  than the configured padding.
+
+Use at least 4 px of clearance between text and non-text decorations, and 8-12
+px when there is enough room.
+
 ## Requirements
 
 - macOS with Bluetooth enabled.
