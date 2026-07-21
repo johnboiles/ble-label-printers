@@ -105,6 +105,18 @@ python tools/ptn25bt/generate_prn.py work/brother-showoff.prn \
   --preview-png work/brother-showoff.png
 ```
 
+### Web Bluetooth Demo
+
+There is also an experimental browser-only demo for Chrome/Edge on macOS:
+
+```sh
+python3 -m http.server 8000 --directory examples/web-bluetooth-ptn25bt
+```
+
+Open <http://localhost:8000>, connect through the browser Bluetooth chooser,
+review the 1bpp preview, then print. See
+[`examples/web-bluetooth-ptn25bt`](examples/web-bluetooth-ptn25bt) for details.
+
 ## SUPVAN E10
 
 Build:

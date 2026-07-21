@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brother PT-N25BT Web Bluetooth Demo</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Experimental Web Bluetooth</p>
+        <h1>Brother PT-N25BT Label Demo</h1>
+        <p>
+          Generate a true 1bpp bitmap label in the browser, connect to the
+          PT-N25BT over BLE, and send the reverse-engineered Brother raster
+          stream with ACK handling.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="controls">
+          <button id="connectButton" type="button">Connect PT-N25BT</button>
+          <button id="statusButton" type="button" disabled>Read Status</button>
+          <button id="printButton" type="button">Print Label</button>
+        </div>
+        <p id="connectionState" class="state">Not connected</p>
+      </section>
+
+      <section class="panel form-grid">
+        <label>
+          Label text
+          <input id="labelText" value="WEB BLUETOOTH" autocomplete="off">
+        </label>
+        <label>
+          Artwork width (px)
+          <input id="lengthPx" type="number" min="160" max="720" step="10" value="360">
+        </label>
+        <label>
+          Trailing pad (mm)
+          <input id="trailingPadMm" type="number" min="0" max="30" step="0.1" value="13.4">
+        </label>
+        <label>
+          BLE chunk size
+          <input id="chunkSize" type="number" min="20" max="512" step="1" value="180">
+        </label>
+        <label>
+          Write delay (ms)
+          <input id="writeDelayMs" type="number" min="0" max="50" step="1" value="8">
+        </label>
+        <button id="previewButton" type="button">Generate Preview</button>
+      </section>
+
+      <section class="panel">
+        <div class="preview-header">
+          <h2>1bpp Preview</h2>
+          <a id="downloadLink" href="#" download="ptn25bt-label.prn" hidden>Download PRN</a>
+        </div>
+        <canvas id="previewCanvas" width="1440" height="256" aria-label="Label preview"></canvas>
+        <p class="hint">
+          Preview is nearest-neighbor scaled and excludes trailing pad. If text
+          touches a frame or decoration, simplify before printing.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="preview-header">
+          <h2>Log</h2>
+          <button id="clearLogButton" type="button" class="secondary">Clear</button>
+        </div>
+        <pre id="log"></pre>
+      </section>
+    </main>
+  </body>
+</html>
