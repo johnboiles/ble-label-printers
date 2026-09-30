@@ -7,6 +7,7 @@ This is unofficial software. It currently supports:
 
 - Brother PT-N25BT on 12 mm tape.
 - SUPVAN E10 on 12 mm tape.
+- NIIMBOT B21S, tested on 50 × 30 mm gap labels.
 
 ## What Works
 
@@ -37,7 +38,7 @@ px when there is enough room.
 
 - macOS with Bluetooth enabled.
 - Xcode command line tools for `swiftc` and `codesign`.
-- Python 3 with Pillow.
+- Python 3.10 or later with Pillow.
 
 ```sh
 python3 -m venv .venv
@@ -151,6 +152,77 @@ python tools/supvan-e10/generate_job.py work/e10-border.spv \
   --preview-png work/e10-border.png
 ```
 
+## NIIMBOT B21S
+
+Build the signed app (macOS 14 or later):
+
+```sh
+./scripts/build-niimbot-b21s.sh
+mkdir -p work
+```
+
+Generate a single-copy JSON job and true 1bpp previews:
+
+```sh
+. .venv/bin/activate
+python tools/niimbot-b21s/generate_job.py work/b21s-name.json \
+  --text "John" --width-mm 50 --height-mm 30 \
+  --preview-png work/b21s-name.png
+```
+
+Add `--logo /path/to/logo.png` to place a logo above the name. Text automatically
+shrinks to fit, including descenders. Alternatively, use `--image /path/to/art.png`
+instead of `--text` to fit existing artwork while preserving its aspect ratio.
+Transparent artwork is composited onto white before thresholding. Use `--font`
+to select a local TrueType/OpenType font.
+
+Review `work/b21s-name.png` and `work/b21s-name-4x.png`, validate the job without
+accessing Bluetooth, then print:
+
+```sh
+.build/niimbot-b21s validate-file work/b21s-name.json
+open -Wn .build/NiimbotB21S.app \
+  --stdout work/b21s-print.out \
+  --stderr work/b21s-print.err \
+  --args --scan-seconds 30 send-file "$PWD/work/b21s-name.json"
+```
+
+The app discovers a printer whose name is `B21S` or begins with `B21S-`.
+When several are nearby, select one with `--name EXACT_ADVERTISED_NAME` or
+`--uuid MACOS_PERIPHERAL_UUID`; UUID selection takes precedence over name.
+Printer selection options go before the command. For read-only status:
+
+```sh
+open -Wn .build/NiimbotB21S.app \
+  --stdout work/b21s-status.out \
+  --stderr work/b21s-status.err \
+  --args --scan-seconds 30 status
+```
+
+Read stdout and stderr after each run. A completed job reports one page with
+100% print/feed progress and an acknowledged PrintEnd; this does not verify
+visible marks on the physical label. If a job fails after raster transfer begins,
+inspect the output and printer before retrying to avoid unintended duplicates.
+Roll RFID data does not supply label dimensions; set the generator dimensions
+from the actual stock.
+
+Known-good settings, physically verified on B21S model 777 / firmware 40.33:
+
+- 8 dots/mm (203.2 dpi), with a 384-dot / 48 mm printhead. A 50 × 30 mm label
+  uses a 384 × 240 pixel printable area.
+- Six-byte page size: height, width, and copy count as big-endian 16-bit values.
+  The four-byte form can acknowledge success and feed a completely blank label.
+- Single-copy jobs, gap label type `1`, density `3` (adjustable from `1` to `5`).
+- MSB-first row raster, `1` for black, split black-pixel counts per 128-dot
+  printhead segment, and 15 ms pacing between rows.
+- No continuous-tape trailing padding is added.
+
+Offline regression checks (no scanning or printing):
+
+```sh
+python -m unittest discover -s tests -v
+```
+
 ## Codex Skill
 
 This repository is also a Codex skill. The root [SKILL.md](SKILL.md) contains
@@ -211,3 +283,20 @@ The Android app maps E10 to `T15Print`:
 Command frames start with `7e 5a`, command responses echo the command byte at
 offset 7, and E-series bulk frames are sent as 512-byte frames split into four
 128-byte BLE writes.
+
+### NIIMBOT B21S
+
+- Service: `E7810A71-73AE-499D-8C15-FAA9AEF0C3F2`.
+- Notify/write characteristic: `BEF8D6C9-9C21-4C9E-B632-BD58C1009F9F`.
+- Subscribe before writing without response. Frames use
+  `55 55 COMMAND LENGTH PAYLOAD XOR AA AA`; XOR covers command, length, and
+  payload. Connect (`C1`) additionally uses a leading `03` byte.
+- Page setup acknowledgments can contain `01 00`, so successful print setup
+  accepts the `01` prefix rather than requiring an exact one-byte reply.
+- The client buffers fragmented/coalesced notifications, checks checksums,
+  honors CoreBluetooth write readiness, and stops on printer errors or timeouts.
+
+The protocol follows [NiimBlueLib](https://github.com/MultiMote/niimbluelib),
+with the B21S six-byte page-size correction confirmed by
+[niimprint issue 33](https://github.com/AndBondStyle/niimprint/issues/33#issuecomment-2269529773)
+and [NiimPrintX PR 50](https://github.com/labbots/NiimPrintX/pull/50).

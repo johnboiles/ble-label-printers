@@ -1,6 +1,6 @@
 ---
 name: ble-label-printers
-description: Control reverse-engineered Bluetooth LE label printers from macOS, including Brother PT-N25BT and SUPVAN E10 1bpp label generation, preview review, status checks, and printing.
+description: Control reverse-engineered Bluetooth LE label printers from macOS, including Brother PT-N25BT, SUPVAN E10, and NIIMBOT B21S 1bpp label generation, preview review, status checks, and printing.
 ---
 
 # BLE Label Printers
@@ -13,6 +13,7 @@ Supported printers:
 
 - Brother PT-N25BT
 - SUPVAN E10
+- NIIMBOT B21S
 
 ## Shared Workflow
 
@@ -147,6 +148,52 @@ open -Wn .build/SupvanE10.app \
   --stderr work/e10-status.err \
   --args --name T0011 --scan-seconds 25 status
 ```
+
+## NIIMBOT B21S
+
+Build and generate a single-copy label:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
+mkdir -p work
+./scripts/build-niimbot-b21s.sh
+python tools/niimbot-b21s/generate_job.py work/b21s-label.json \
+  --text "HELLO" --width-mm 50 --height-mm 30 \
+  --preview-png work/b21s-label.png
+```
+
+Use `--logo PATH` with text for name labels, or `--image PATH` instead of text
+for existing artwork. Both handle transparency on white. Inspect the generated
+preview and its `-4x.png` enlargement, then validate and print:
+
+```sh
+.build/niimbot-b21s validate-file work/b21s-label.json
+open -Wn .build/NiimbotB21S.app \
+  --stdout work/b21s-print.out --stderr work/b21s-print.err \
+  --args --scan-seconds 30 send-file "$PWD/work/b21s-label.json"
+```
+
+For status, use the same app with `--args --scan-seconds 30 status` and separate
+status log files. Default discovery matches B21S names; select a specific printer
+with `--name EXACT_ADVERTISED_NAME` or `--uuid MACOS_PERIPHERAL_UUID` before the
+command. UUID wins if both are supplied.
+
+Verified on model 777 / firmware 40.33 with 50 × 30 mm gap labels:
+
+- 8 dots/mm, 384-dot / 48 mm printhead; 50 × 30 mm stock uses 384 × 240 pixels.
+- Six-byte page size includes the copy count. Preserve this: a four-byte size
+  can produce a blank label despite successful acknowledgments.
+- One copy, density `3`, label type `1`; no trailing tape padding.
+- Setup success can be `01 00`. Completion requires a page count of one,
+  print/feed progress at 100%, and a successful PrintEnd reply.
+
+Use the actual roll dimensions; RFID metadata does not contain its physical
+size. Read the logs after printing, and distinguish protocol completion from
+visual confirmation of the physical label. After a partial transfer, inspect the
+printer and logs before deciding whether to resend. See the
+[README B21S section](README.md#niimbot-b21s) for protocol notes and offline tests.
 
 ## Constraints
 
