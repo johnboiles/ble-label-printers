@@ -6,6 +6,7 @@ label printers.
 This is unofficial software. It currently supports:
 
 - Brother PT-N25BT on 12 mm tape.
+- Brother PT-P320BT on 12 mm tape.
 - SUPVAN E10 on 12 mm tape.
 - NIIMBOT B21S, tested on 50 × 30 mm gap labels.
 
@@ -105,6 +106,51 @@ python tools/ptn25bt/generate_prn.py work/brother-showoff.prn \
   --length-px 560 \
   --preview-png work/brother-showoff.png
 ```
+
+## Brother PT-P320BT
+
+Uses the existing Brother CoreBluetooth app with `--name PT-P320BT`, but needs
+its own raster generator: transfer columns are **64 dots / 8 bytes**, rather
+than the PT-N25BT's 128 dots / 16 bytes.
+
+```sh
+./scripts/build-ptn25bt.sh
+. .venv/bin/activate
+python tools/ptp320bt/generate_prn.py work/p320-hello.prn \
+  --text "HELLO" --length-px 320 --preview-png work/p320-hello.png
+```
+
+For custom artwork, replace `--text` with `--image /path/to/art.png`. Supply
+an image exactly 64 pixels high; its width is preserved. Transparency is
+composited onto white, then thresholded to 1bpp. Review both the preview and
+its `-4x.png` enlargement, then print:
+
+```sh
+open -Wn .build/PTN25BT.app \
+  --stdout work/p320-print.out --stderr work/p320-print.err \
+  --args --name PT-P320BT --scan-seconds 30 --post-wait 20 \
+  send-file "$PWD/work/p320-hello.prn"
+```
+
+For status, use the same app with `--args --name PT-P320BT status`.
+Expected idle status: series `0x30`, model `0x83`, errors `0x0000`, width `12mm`.
+Read the output log: `File sent` only confirms transport delivery. An e4
+`printerDataRaw` status with byte 18 equal to `01` means printing completed;
+the existing client waits a fixed `--post-wait` interval, not for completion.
+
+Settings reproduced from an official Design&Print 2 capture and tested on
+PT-P320BT with 12 mm laminated tape:
+
+- 180 dpi, 64-dot monochrome columns, top pixel first/MSB first, one for black.
+- Uncompressed `47 08 00` raster records, including blank columns.
+- Media type `01`, page mode `02`, feed margin 28 dots, no appended blank padding.
+- Manual cutter. Captured mode byte `40` is preserved; it does not mean this
+  printer has an automatic cutter.
+- Other tape widths, PackBits and margin calibration have not been tested.
+
+The official-app `HELLO` payload is a byte-for-byte regression fixture in
+`tests/fixtures/ptp320bt`. Full HCI captures and device identifiers are not
+included. See [protocol notes](tools/ptp320bt/PROTOCOL.md).
 
 ## SUPVAN E10
 
