@@ -1,6 +1,6 @@
 ---
 name: ble-label-printers
-description: Control reverse-engineered Bluetooth LE label printers from macOS, including Brother PT-N25BT, SUPVAN E10, and NIIMBOT B21S 1bpp label generation, preview review, status checks, and printing.
+description: Control reverse-engineered Bluetooth LE label printers from macOS, including Brother PT-N25BT, Brother PT-P320BT, SUPVAN E10, and NIIMBOT B21S 1bpp label generation, preview review, status checks, and printing.
 ---
 
 # BLE Label Printers
@@ -12,6 +12,7 @@ macOS.
 Supported printers:
 
 - Brother PT-N25BT
+- Brother PT-P320BT (12 mm tape)
 - SUPVAN E10
 - NIIMBOT B21S
 
@@ -98,6 +99,30 @@ open -Wn .build/PTN25BT.app \
 
 Expected idle 12 mm media status includes model series `0x41`, model `0x30`,
 errors `0x0000`, and width `12mm`.
+
+## Brother PT-P320BT
+
+Build `./scripts/build-ptn25bt.sh` and reuse `.build/PTN25BT.app` with
+`--name PT-P320BT`. Generate jobs using **`tools/ptp320bt/generate_prn.py`**,
+not the PT-N25BT generator: P320BT uses 8-byte transfer columns.
+
+```sh
+python tools/ptp320bt/generate_prn.py work/p320.prn \
+  --text "HELLO" --length-px 320 --preview-png work/p320.png
+open -Wn .build/PTN25BT.app \
+  --stdout work/p320.out --stderr work/p320.err \
+  --args --name PT-P320BT --post-wait 20 send-file "$PWD/work/p320.prn"
+```
+
+Review `work/p320.png` and `work/p320-4x.png` before printing. `--image PATH`
+accepts artwork exactly 64 pixels high instead of text. Use 12 mm tape;
+other widths are untested. Do not add the PT-N25BT's 13.4 mm trailing pad.
+The captured P320BT settings use a 28-dot feed margin.
+
+For status, use `--args --name PT-P320BT status`. Expect series `0x30`,
+model `0x83`. Confirm a 32-byte e4 status with byte 18 equal to `01` in the
+print log; `File sent` is only an acknowledgment of transfer. The shared
+client uses a fixed post-send wait. See [protocol notes](tools/ptp320bt/PROTOCOL.md).
 
 ## SUPVAN E10
 
